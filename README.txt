@@ -29,7 +29,7 @@ README.txt
 To test your dependencies and implementation, I recommend you run the tester file the first time you run PLAIDOH using the following command:
 
 
-perl PLAIDOH.pl Example_Input_File.txt
+perl PLAIDOH.pl --cellENH A549 --cellSE A549 --cellCHIP A549 --RBP NONO Example_Input_File.txt
 
 
 
