@@ -1,4 +1,4 @@
-README for PLAIDOH lncRNA Annotation Software
+README for PLAIDOH LncRNA Annotation Software
 
 After downloading from github, PLAIDOH is all ready to go! <--- Currently a lie! Must manually unzip the two zip files. All else should be golden. 
 Supplementary information and a description of PLAIDOH output files can be found in Pyfrom et al, 2018 (PLAIDOH: A Novel Approach for Functional Prediction of Long Non-Coding RNAs Identifies Cancer-Specific LncRNA Activities). We suggest you take a look at Table 1!
