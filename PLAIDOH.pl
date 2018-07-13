@@ -6,12 +6,12 @@ use strict;
 use Getopt::Long qw(GetOptions);
 use Term::ANSIColor;
 use Term::ANSIColor 2.00 qw(:pushpop);
-
-#Modules in "Modules" folder downloaded with PLAIDOH
-use lib '../Modules';
 use List::Util qw(sum);
 use List::Util qw(max);
 use List::Util qw(min);
+
+#Modules in "Modules" folder downloaded with PLAIDOH
+use lib 'Modules/';
 use Math::GSL::CDF qw/:all/;
 use Math::Round qw(:all);
 use Statistics::R;
