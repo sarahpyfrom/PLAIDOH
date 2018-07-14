@@ -52,7 +52,7 @@ Biomartquery_hg19.txt.zip
 
 To run **PLAIDOH** on your own dataset, you should use the following command with the appropriate options to specify your own datasets: 
 
-```Bash
+```
 perl PLAIDOH.pl [options] <Input tab-delimited bed file with columns: #Chr Start Stop Name Type(lncRNA, antisense_RNA or protein_coding) Sample1_Expression Sample2_Expression etc >
                 
                 Please Note: The first line MUST start with a #.
