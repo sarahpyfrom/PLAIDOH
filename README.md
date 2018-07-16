@@ -37,7 +37,7 @@ To test your dependencies and create some necessary default files, PLAIDOH shoul
 perl PLAIDOH.pl --cellENH A549 --cellSE A549 --cellCHIP A549 --RBP NONO Example_Input_File.txt
 ```
 
-This process should is only necessary once. It should generate two files:
+This process is only necessary once. It should generate two files:
 
 ```
 Default_Files/RNABindingProtein_eCLIP_h19.txt
