@@ -82,6 +82,6 @@ perl PLAIDOH.pl [options] <Input tab-delimited bed file with columns: #Chr Start
         -p filename for CHIA-pet data
         
         -r filename for RBP file
-           --RBP Optional selection to pick a specific cell line
+           --RBP Optional selection to pick a specific RBP
                 variable from the RBP list
 ```
