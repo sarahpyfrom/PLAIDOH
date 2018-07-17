@@ -86,7 +86,7 @@ perl PLAIDOH.pl [options] <Input tab-delimited bed file with columns: #Chr Start
                 variable from the RBP list
 ```
 
-###PLAIDOH Output File
+## PLAIDOH Output File
 
 PLAIDOH outputs a several supporting files and a single final file with the name "Master_$input_filename". It has 42 tab-delimited columns, which are described in the following table. Each line contains information about a single lncRNA and one coding gene within 400kb of the lncRNA:
 
