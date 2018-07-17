@@ -90,7 +90,7 @@ perl PLAIDOH.pl [options] <Input tab-delimited bed file with columns: #Chr Start
 
 PLAIDOH outputs a several supporting files and a single final file with the name "Master_$input_filename". It has 42 tab-delimited columns, which are described in the following table. Each line contains information about a single lncRNA and one coding gene within 400kb of the lncRNA:
 
-Column Number | |Column Heading | |Description
+Column Number | Column Heading | Description
 ----------------|-------------|-----------
 1 | LINE_NUMBER | Unique numerical designation for each lncRNA and protein pair (LCP)
 2 | CHRlnc | Chromosome of lncRNA
