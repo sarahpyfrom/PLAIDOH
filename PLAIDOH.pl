@@ -1,6 +1,6 @@
 #!/usr/bin/perl
 
-#Built in Modules
+#Required Modules
 use warnings;
 use strict;
 use Getopt::Long qw(GetOptions);
@@ -9,9 +9,6 @@ use Term::ANSIColor 2.00 qw(:pushpop);
 use List::Util qw(sum);
 use List::Util qw(max);
 use List::Util qw(min);
-
-#Modules in "Modules" folder downloaded with PLAIDOH
-use lib 'Modules/';
 use Math::GSL::CDF qw/:all/;
 use Math::Round qw(:all);
 use Statistics::R;
@@ -54,7 +51,7 @@ if (@ARGV == 0 ){ die
         -p filename for CHIA-pet data
         
         -r filename for RBP file
-           --RBP Optional selection to pick a specific cell line
+           --RBP Optional selection to pick a specific RBP
                 variable from the RBP list\n\n";
                     
                     }
@@ -99,6 +96,15 @@ if (not -e "Default_Files/RNABindingProtein_eCLIP_h19.txt") {
 if (not -e "Default_Files/ENCODE_ChIPseq_pValues.txt") {
     print "\nIt looks like you don't have the Default  ChIP-seq file yet! Hold on a minute while I make it and then I'll get around to that PLAIDOH command!\n";
     system("cat Default_Files/ChIP_Files/*.txt | sort -k1,1 -k2,2n > Default_Files/ENCODE_ChIPseq_pValues.txt")
+}
+
+if (not -e "Default_Files/K562_and_MCF7_POL2RAChIApet.txt") {
+    print "\nUnzipping a few things...\n";
+    system("unzip Default_Files/K562_and_MCF7_POL2RAChIApet.txt.zip -d Default_Files")
+}
+
+if (not -e "Default_Files/Biomartquery_hg19.txt") {
+    system("unzip Default_Files/Biomartquery_hg19.txt.zip -d Default_Files")
 }
 
 #ENCODE_ChIPseq_pValues.txt
@@ -154,6 +160,8 @@ my %adjustedp;
 my %strand;
 my %NEAR2;
 my %RBP;
+my %RBPNuc;
+my %RBPCyt;
 
 ## ARRAYS
 my @cors;
@@ -162,6 +170,7 @@ my @lnc;
 my @Lexp;
 my @Pexp;
 my @testadjust;
+my @currrbp;
 
 #STRINGS
 my $header = 0;
@@ -197,6 +206,7 @@ my $dist;
 my $ptss;
 my $ltss;
 my $tsstotss;
+
 
 
 ##################################################################
@@ -422,7 +432,7 @@ while (my $line = <LANDP>) {
 close OUTTAD;
 
 ##Performs the lncRNA/protein intersect with TADs
-system("bedtools intersect -u -f 1 -a MAXregion.bed -b hESCTADboundariesCombined.bed > lncsandproteinsintads.bed");
+system("bedtools intersect -u -f 1 -a MAXregion.bed -b Default_Files/hESCTADboundariesCombined.bed > lncsandproteinsintads.bed");
 system("rm MAXregion.bed");
 
 
@@ -566,6 +576,17 @@ while (my $line = <SUB>) {
 }
 close SUB;
 
+open(FRAC, "<Default_Files/RBP_NucvsCyt.txt");
+
+while (my $line = <FRAC>) {
+    chomp($line);
+    my @data = split("\t", $line);
+
+    $RBPNuc{$data[0]}=$data[1];
+    $RBPCyt{$data[0]}=$data[2];
+}
+close SUB;
+
 print "Cell fraction file hashed...\n";
 
 ##################################################################
@@ -652,11 +673,11 @@ print "p-values adjusted...\n\n";
 
 print "Finished reading in all input files. Starting CREPE calculations!\n\n";
 
-#%%%%%%%%%%%%%%%%%%%%%%%%%%***********%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-##################################################################%
-###################  THE HEART OF THE CREPE  #####################%
-##################################################################%
-#%%%%%%%%%%%%%%%%%%%%%%%%%%***********%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+#%%%%%%%%%%%%%%%%***********%%%%%%%%%%%%%%%%%%%
+################################################################%
+###################  THE HEART OF PLAIDOH  #####################%
+################################################################%
+#%%%%%%%%%%%%%%%%***********%%%%%%%%%%%%%%%%%%%%
 
 ##Open in the intersected file and open the final output file.
 open(MAS, "<lncs_and_proteins_intersect_$file") or die "Could not open lncs_and_proteins_intersect_$file";
@@ -665,8 +686,9 @@ open(OUT, ">Master_$file") or die "Could not open Master_$file";
 ##print a Header for the output file:
 print OUT "LINE_NUMBER\tCHRlnc\tSTARTlnc\tSTOPlnc\tNAMElnc\tTYPElnc\tNUMBERlnc\tCHRprot\tSTARTprot\tSTOPprot\tNAMEprot\t";
 print OUT "TYPEprot\tNUMBERprot\tLNC_PROTEIN_OVERLAP\tDIST_L_to_P\tLNC_AVERAGE\tPROTEIN_AVERAGE\tPEARSON\tPEARSONp\t";
-print OUT "SPEARMAN\tSPEARMANp\tCHIA\tTAD\tINTERGENIC\tCHIPSEQ\tH3K4ME3\tH3K27AC\tH3K4ME1\tRBPs\tNEARFANTOM\tNEAR_SE\t";
-print OUT "GO\tP_strand\tL_strand\tTSStoTSSdist\tFraction\tPROTEIN_Fraction\tSENSE_CATEGORY\tADJUSTED_SPEARMAN\tSCORE\tENHANCER_SCORE\n";
+print OUT "SPEARMAN\tSPEARMANp\tCHIA\tTAD\tINTERGENIC\tCHIPSEQ\tH3K4ME3\tH3K27AC\tH3K4ME1\tRBPs\tNEAR_ENH\tNEAR_SE\t";
+print OUT "GO\tP_strand\tL_strand\tTSStoTSSdist\tLNC_NUC_FRACTION\tCODING_NUC_FRACTION\tSENSE_CATEGORY\tADJUSTED_SPEARMAN\tSCORE\tENHANCER_SCORE\t";
+print OUT "FRACTION_SCORE\n";
 
 $count =1;
 my $checker=25;
@@ -928,12 +950,12 @@ foreach my $key (keys %CHIP){
     
     foreach (@peaks){
         my @now = split ("_", $_);
-        if ($now[0] =~ /K4M3/ && $now[1] > $H3K4ME3) {
-            $H3K4ME3 = $now[1]/100;
-        }if ($now[0] =~ /K4M1/ && $now[1] > $H3K4ME1) {
-            $H3K4ME1 = $now[1];
-        }if ($now[0] =~ /K27AC/ && $now[1] > $H3K27AC) {
-            $H3K27AC = $now[1];
+        if ($now[1] =~ /K4M3/ && $now[2] > $H3K4ME3) {
+            $H3K4ME3 = $now[2];
+        }if ($now[1] =~ /K4M1/ && $now[2] > $H3K4ME1) {
+            $H3K4ME1 = $now[2];
+        }if ($now[1] =~ /K27AC/ && $now[2] > $H3K27AC) {
+            $H3K27AC = $now[2];
         }
     }
     
@@ -946,22 +968,20 @@ foreach my $key (keys %CHIP){
 ############ Checking the RBP Data ##############
 #################################################
 
+my $currrbp2;
     
     if (exists $RBP{$data[$numsamp+6]}) {
         #print "Original: $RBP{$data[$numsamp+6]}\n";
-        my @currrbp =split("\t", $RBP{$data[$numsamp+6]});
+        @currrbp =split("\t", $RBP{$data[$numsamp+6]});
         #print "Split: @currrbp\n";
-        my $currrbp2 = join(";", @currrbp);
-        #print "Join: $currrbp2\n";
-        $Master{$data[0]} .= "\t$currrbp2";
-        $limMaster{$data[0]} .= "\t$currrbp2";        
+        $currrbp2 = join(";", @currrbp);
+        #print "Join: $currrbp2\n";       
     }else {
-
-        $Master{$data[0]} .= "\t0";
-        $limMaster{$data[0]} .= "\t0";
+        $currrbp2=0;
     }
 
-
+        $Master{$data[0]} .= "\t$currrbp2";
+        $limMaster{$data[0]} .= "\t$currrbp2"; 
                 
 #################################################
 ######## CHECKING IF NEAR FANTOM ################
@@ -1123,6 +1143,7 @@ foreach my $key (keys %CHIP){
 ######## FINAL SCORE AND ENHANCER SCORE ######
 #################################################
 
+
 ### Cis-regulatory score:
     my $score=0;
     
@@ -1146,6 +1167,52 @@ foreach my $key (keys %CHIP){
     
     $Master{$data[0]} .= "\t$enhancerscore";
     $limMaster{$data[0]} .= "\t$enhancerscore";
+    
+
+###RBP Fraction Score:
+my $NUC="";
+my $CYT="";
+my $fracscores="0";
+my $RScore="";
+
+        foreach my $entry (@currrbp){
+            my @split = split("_", $entry);
+            
+            if ($split[0] eq "0") {$fracscores="NA";  $RScore  .= "$fracscores,"; next;}
+            if ($fraction eq "NA") {$fracscores="NA";  $RScore  .= "$fracscores,"; next;}
+            
+            if (exists $RBPNuc{$split[0]}) {
+                
+                $NUC = $RBPNuc{$split[0]};
+                
+            }if (exists $RBPCyt{$split[0]}) {
+                
+                $CYT = $RBPCyt{$split[0]};
+                
+            }
+            
+            if ($fraction>=0.75 && $NUC==1){ $fracscores = 2;}
+            if ($fraction<=0.3 && $CYT==1){ $fracscores = -2;}
+            if ($fraction>=0.75 && $NUC==0){ $fracscores = 1;}
+            if ($fraction<=0.3 && $CYT==0){ $fracscores = -1;}
+            if ($fraction>0.3 && $fraction < 0.75 && $NUC==0 && $CYT==1){ $fracscores = -2;}
+            if ($fraction>0.3 && $fraction < 0.75 && $NUC==1 && $CYT==0){ $fracscores = 2;}
+            if ($fraction>0.3 && $fraction < 0.75 && $NUC==1 && $CYT==1){ $fracscores = 3;}
+            if ($fracscores eq "0") {$fracscores="NA";}
+            
+            $RScore .= "$fracscores,";
+        }
+
+
+if ($currrbp2 eq "0") {
+    $RScore="NA,";
+}
+
+chop($RScore);
+
+    $Master{$data[0]} .= "\t$RScore";
+    $limMaster{$data[0]} .= "\t$RScore";
+
 
 
 #################################################
