@@ -38,7 +38,7 @@ To test your dependencies and create some necessary default files, PLAIDOH shoul
 perl PLAIDOH.pl --cellENH A549 --cellSE A549 --cellCHIP A549 --RBP NONO Example_Input_File.txt
 ```
 
-This process is only necessary once. It should generate two files:
+This process is only necessary once. It should create two Default files:
 
 ```
 Default_Files/RNABindingProtein_eCLIP_h19.txt
@@ -51,45 +51,99 @@ K562_and_MCF7_POL2RAChIApet.txt.zip
 Biomartquery_hg19.txt.zip
 ```
 
+The test run should also create all of PLAIDOH's standard output files for the Example input file:
+
+`PLAIDOH_OUTPUT_Example_Input_File.txt` This is the primary PLAIDOH output file described in detail in the table below.
+ 
+`PLAIDOH_RUN_LOG.txt` Each time PLAIDOH.pl is run, this file is updated with a new entry, recording the input files and options selected by the user and including "COMPLETED SUCCESSFULLY" with a date and time at which the program finished running if PLAIDOH successfully completed its run and all calculations. 
+
+`lncs_Example_Input_File.txt` contains all entries from the input file with "lncRNA" or "antisense_RNA" in the "Type" column.
+
+`protein_coding_Example_Input_File.txt` contains all entries from the input file with "protein_coding" in the "Type" column.
+
+`misc_Example_Input_File.txt` contains all entries from the input file with anything OTHER THAN "protein_coding", "lncRNA" or "antisense_RNA" in the "Type" column.
+
+`User_Selected_Enhancers.txt`, `User_Selected_Super_Enhancers.txt`, and `User_Selected_RBPs.txt`, are the subset of each datatype that the user's options selected from the chosen Enhancer, Super enhancer, and RBP files. 
+
+`lncRNAs_bound_by_RBPs.txt` is output from a bedtools intersect between lnc_Input_Filename.txt and any RBPs selected by the user.
+
+`lncs_and_proteins_intersect_Example_Input_File.txt` is output from a bedtools intersect between lncs_Example_Input_File.txt and protein_coding_Example_Input_File.txt.
+
+`lncRNAs_in_SuperEnhancers.txt` is output from a bedtools intersect between lncs_Example_Input_File.txt and any User_Selected_Super_Enhancers.txt.
+
+
+PLAIDOH also outputs three R-generated plots of your data: 
+
+`RankedCisRegulatoryScores.jpg` is a graph plotting every Cis-Regulatory score for every LncRNA/Coding gene Pair (LCP) identified by PLAIDOH, ranked from lowest to highest. A linear regression line is plotted in red and can be used to determine the best cut-off score for a likely cis-regulatory lncRNA. 
+
+`RankedEnhancerScores.jpg`  is a graph plotting every Enhnacer score for every LCP identified by PLAIDOH, ranked from lowest to highest. A linear regression line is plotted in red and can be used to determine the best cut-off score for a likely enhancer-associated lncRNA. 
+
+`CisRegulatoryScorebyEnhancerScore.jpg` is a graph plotting the Cis-regulatory and Enhancer score for each LCP.
+ 
+
 To run **PLAIDOH** on your own dataset, you should use the following command with the appropriate options to specify your own datasets: 
 
 ```
-perl PLAIDOH.pl [options] <Input tab-delimited bed file with columns: #Chr Start Stop Name Type(lncRNA, antisense_RNA or protein_coding) Sample1_Expression Sample2_Expression etc >
+    USAGE
+
+        perl PLAIDOH.pl [options] <Input Expression File> 
                 
-                Please Note: The first line MUST start with a #.
-		Input expression file and all user-generated bed
+    REQUIRED INPUT FILE
+        
+        Tab-delimited file with columns: #Chr  Start   Stop   Name   Type(lncRNA, antisense_RNA or protein_coding) Sample1_Expression Sample2_Expression etc
+        
+        The input file should include all lncRNA and protein-coding transcripts of interest.
+        
+        Please see Example_Input_File.txt for an Example of a properly-formatted Input file. 
+         
+                Please Note: Input expression file and all user-generated bed
                 files should be sorted using the following command if you wish
                 to use any default PLAIDOH input files:
-                sort -k1,1 -k2,2n in.bed > in.sorted.bed
+                sort -k1,1 -k2,2n in.txt > in_sorted.txt
                 
-        OPTIONS
+    OPTIONS
         
-        -s filename for Super-enhancer file
-           --cellSE Optional selection to pick a specific cell line
-                variable from the SE list
+       -s filename for Super-enhancer file.
+            Default file: SEA_SuperEnhancers.bed
+        
+        --cellSE Optional selection to pick a specific cell line
+               from the super enhancer list
            
-       -e filename for Enhancer data
-           --cellENH Optional selection to pick a specific cell line
-                variable from the Enhancer list
+       -e filename for Enhancer data.
+            Default file: EnhancerAtlas_Enhancers.bed
+           
+        --cellENH Optional selection to pick a specific cell line
+               from the Enhancer list
        
-       -f filename for Nuclear Fraction file
+       -f finename for Nuclear Fraction file
+            Default file: Nuclear_Fraction_GM12878_hg19.txt
        
-       -b filename for Biomart Query file
+       -b filename for Biomart Query file (includes GO terms and other annotatin options)
+            Default file: Biomartquery_hg19.txt
         
-        -c filename for Chip-seq data
-           --cellCHIP Optional selection to pick a specific cell line
-                variable from the ChipSeq list
+       -c filename for Chip-seq data
+            Default file: ENCODE_ChIPseq_pValues.txt
+            
+        --cellCHIP Optional selection to pick a specific cell line
+                from the ChipSeq list
         
-        -p filename for CHIA-pet data
+       -p filename for CHIA-pet data
+             Default file: K562_and_MCF7_POL2RAChIApet.txt   
         
-        -r filename for RBP file
-           --RBP Optional selection to pick a specific RBP
+       -r filename for RBP file
+            Default file: RNABindingProtein_eCLIP_h19.txt
+        
+        --RBP Optional selection to pick a specific RBP
                 variable from the RBP list
+
+                
+        Detailed descriptions for all input files and their sources can be found in the Methods
+        secition of Pyfrom, Luo and Payton, 2018 BMC Genomics.
 ```
 
 ## PLAIDOH Output File
 
-PLAIDOH outputs a several supporting files and a single final file with the name "Master_$input_filename". It has 42 tab-delimited columns, which are described in the following table. Each line contains information about a single lncRNA and one coding gene within 400kb of the lncRNA:
+PLAIDOH outputs a several supporting files and a single final file with the name "Output_$input_filename". It has 42 tab-delimited columns, which are described in the following table. Each line contains information about a single lncRNA and one coding gene within 400kb of the lncRNA:
 
 Column Number | Column Heading | Description
 ----------------|-------------|-----------
