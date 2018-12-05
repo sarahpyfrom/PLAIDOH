@@ -24,6 +24,8 @@ After cloning or downloading **PLAIDOH** from github, you should have the follow
 |-- README.md
 ```
 
+**PLEASE NOTE: ALL default files use Human hg19 genomic coordinates. If you have input expression data aligned to another genome assembly, I suggest using a genomic [liftOver](http://genome.ucsc.edu/cgi-bin/hgLiftOver) tool to lift over your coordinates to hg19**
+
 ### Dependencies
 PLAIDOH has few dependencies, but does require a few common bioinformatics tools/languages on your PATH. Most people will likely already have them installed:
  - [bedtools2](http://bedtools.readthedocs.io/en/latest/index.html)
