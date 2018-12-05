@@ -26,6 +26,19 @@ After cloning or downloading **PLAIDOH** from github, you should have the follow
 
 **PLEASE NOTE: ALL default files use Human hg19 genomic coordinates. If you have input expression data aligned to another genome assembly, I suggest using a genomic [liftOver](http://genome.ucsc.edu/cgi-bin/hgLiftOver) tool to lift over your coordinates to hg19**
 
+## Required Input Files
+
+PLAIDOH requires a single user-generated input file, in addition to the publicly available default inputs that come with PALIDOH. The input file must have the following columns in the order shown in the example table below: 
+
+#CHR | START | STOP | NAME | TYPE | SAMPLE1 | SAMPLEN
+----------------|-------------|-----------|-----------|-----------|-----------|-----------|
+chr1 | 112 | 256 | DHX9 | protein_coding | 0.675 | 5.89
+chr1 | 778 | 4334 | AC00896.1 | lncRNA | 89 | 4
+chr1 | 334 | 566 | RP9911.3 | antisense_rna | 8.3 | 0.33
+
+CHR must be the chromosome for the transcript on that line. The START and STOP coordinates may be any region of the transcripts the user wishes to study, but PLAIDOH will only consider within the boundaries provided by the input file. The NAME category may be either a gene name or an ENSEMBL identifier. The TYPE category may be any identifier the user chooses but PLAIDOH will ONLY provide annotation and predictions for transcripts labeled “protein_coding, “lncRNA” or antisense_rna” all other designations will be filtered into the “misc” output file. The user may include as many samples as they choose and utilize any calculation for expression (e.g., FPKM, CPM, microarray probe count etc.). The input should be sorted by CHR and START coordinate using sort -k1,1 -k2,2n.  
+
+
 ### Dependencies
 PLAIDOH has few dependencies, but does require a few common bioinformatics tools/languages on your PATH. Most people will likely already have them installed:
  - [bedtools2](http://bedtools.readthedocs.io/en/latest/index.html)
