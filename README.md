@@ -26,7 +26,7 @@ After cloning or downloading **PLAIDOH** from github, you should have the follow
 
 **PLEASE NOTE: ALL default files use Human hg19 genomic coordinates. If you have input expression data aligned to another genome assembly, I suggest using a genomic [liftOver](http://genome.ucsc.edu/cgi-bin/hgLiftOver) tool to lift over your coordinates to hg19**
 
-## Required Input Files
+## Required Input File
 
 PLAIDOH requires a single user-generated input file, in addition to the publicly available default inputs that come with PALIDOH. The input file must have the following columns in the order shown in the example table below: 
 
@@ -95,6 +95,7 @@ PLAIDOH also outputs three R-generated plots of your data:
 
 `CisRegulatoryScorebyEnhancerScore.jpg` is a graph plotting the Cis-regulatory and Enhancer score for each LCP.
  
+## PLAIDOH Usage
 
 To run **PLAIDOH** on your own dataset, you should use the following command with the appropriate options to specify your own datasets: 
 
