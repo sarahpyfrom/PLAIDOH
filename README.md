@@ -44,6 +44,7 @@ PLAIDOH has few dependencies, but does require a few common bioinformatics tools
  - [bedtools2](http://bedtools.readthedocs.io/en/latest/index.html)
  - [perl5](https://www.perl.org/)
  - [R](https://www.r-project.org/)
+    - [ggplot2](https://CRAN.R-project.org/package=ggplot2)
 
 ## Quick Start
 
@@ -156,6 +157,8 @@ To run **PLAIDOH** on your own dataset, you should use the following command wit
         Detailed descriptions for all input files and their sources can be found in the Methods
         secition of Pyfrom, Luo and Payton, 2018 BMC Genomics.
 ```
+
+
 
 ## PLAIDOH Output File
 
