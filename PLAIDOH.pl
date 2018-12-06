@@ -9,8 +9,6 @@ use Term::ANSIColor 2.00 qw(:pushpop);
 use List::Util qw(sum);
 use List::Util qw(max);
 use List::Util qw(min);
-use Math::GSL::CDF qw/:all/;
-use Math::Round qw(:all);
 use Statistics::R;
 
 
@@ -23,36 +21,61 @@ use Statistics::R;
 
 if (@ARGV == 0 ){ die 
                  
-"\nUsage: perl $0 [options] <Input tab-delimited bed file with columns: #Chr Start Stop Name Type(lncRNA, antisense_RNA or protein_coding) Sample1_Expression Sample2_Expression etc >
+"\n
+    USAGE
+
+        perl $0 [options] <Input Expression File> 
                 
+    REQUIRED INPUT FILE
+        
+        Tab-delimited file with columns: #Chr  Start   Stop   Name   Type(lncRNA, antisense_RNA or protein_coding) Sample1_Expression Sample2_Expression etc
+        
+        The input file should include all lncRNA and protein-coding transcripts of interest.
+        
+        Please see Example_Input_File.txt for an Example of a properly-formatted Input file. 
+         
                 Please Note: Input expression file and all user-generated bed
                 files should be sorted using the following command if you wish
                 to use any default PLAIDOH input files:
-                sort -k1,1 -k2,2n in.bed > in.sorted.bed
+                sort -k1,1 -k2,2n in.txt > in_sorted.txt
                 
-        OPTIONS
+    OPTIONS
         
-        -s filename for Super-enhancer file
-           --cellSE Optional selection to pick a specific cell line
-                variable from the SE list
+        -s filename for Super-enhancer file.
+            Default file: SEA_SuperEnhancers.bed
+        
+        --cellSE Optional selection to pick a specific cell line
+               from the super enhancer list
            
-       -e filename for Enhancer data
-           --cellENH Optional selection to pick a specific cell line
-                variable from the Enhancer list
+       -e filename for Enhancer data.
+            Default file: EnhancerAtlas_Enhancers.bed
+           
+        --cellENH Optional selection to pick a specific cell line
+               from the Enhancer list
        
        -f finename for Nuclear Fraction file
+            Default file: Nuclear_Fraction_GM12878_hg19.txt
        
-       -b filename for Biomart Query file
+       -b filename for Biomart Query file (includes GO terms and other annotatin options)
+            Default file: Biomartquery_hg19.txt
         
         -c filename for Chip-seq data
-           --cellCHIP Optional selection to pick a specific cell line
-                variable from the ChipSeq list
+            Default file: ENCODE_ChIPseq_pValues.txt
+            
+        --cellCHIP Optional selection to pick a specific cell line
+                from the ChipSeq list
         
         -p filename for CHIA-pet data
+             Default file: K562_and_MCF7_POL2RAChIApet.txt   
         
         -r filename for RBP file
-           --RBP Optional selection to pick a specific RBP
-                variable from the RBP list\n\n";
+            Default file: RNABindingProtein_eCLIP_h19.txt
+        
+        --RBP Optional selection to pick a specific RBP
+                variable from the RBP list\n
+                
+        Detailed descriptions for all input files and their sources can be found in the Methods
+        secition of Pyfrom, Luo and Payton, 2018 BMC Genomics.\n\n";
                     
                     }
 
@@ -171,6 +194,10 @@ my @Lexp;
 my @Pexp;
 my @testadjust;
 my @currrbp;
+my @cisscores;
+my @enhscores;
+my @RBPscores;
+
 
 #STRINGS
 my $header = 0;
@@ -219,7 +246,7 @@ open(PCS, ">protein_coding_$file") or die "Could not open first output protein_c
 open(MISC, ">misc_$file") or die "Could not open first output misc_$file\n";
 
 
-
+if(not -e "User_Selected_Omics_Files/") {system("mkdir User_Selected_Omics_Files");}
 
 ##Opens the file and removes the endline characters. Splits the line at tabs into the array @data
 while (my $line = <IN>) {
@@ -278,8 +305,8 @@ close MISC;
 
 #Opens up the CHIApet file and various other output files for the two "halves" of each CHIAPET interaction
 open(CHIA, "<$chiapetfile") or die "Could not open file: $chiapetfile\n"; ##Changed this to NB4...who knows?
-open(LEFT, ">LEFT1.txt") or die "Could not open file: LEFT1.txt\n";
-open(RIGHT, ">RIGHT1.txt") or die "Could not open file: RIGHT1.txt\n";
+open(LEFT, ">Upstream_CHIApet_Overlaps.txt") or die "Could not open file: Upstream_CHIApet_Overlaps.txt\n";
+open(RIGHT, ">Downstream_CHIApet_Overlaps.txt") or die "Could not open file: Downstream_CHIApet_Overlaps.txt\n";
 
 #Just a counter for later hash referencing
 my $countchia = 0;
@@ -315,17 +342,18 @@ close RIGHT;
 
 ##All the CHIApet bedtools intersects 
 
-system("sort -k1,1 -k2,2n LEFT1.txt > LEFT.txt");
-system("sort -k1,1 -k2,2n RIGHT1.txt > RIGHT.txt");
+system("sort -k1,1 -k2,2n Upstream_CHIApet_Overlaps.txt > Upstream_CHIApet_Overlaps_sorted.txt");
+system("sort -k1,1 -k2,2n Downstream_CHIApet_Overlaps.txt > Downstream_CHIApet_Overlaps_sorted.txt");
 
-system("bedtools intersect -wa -wb -a lncs_$file -b LEFT.txt >> CHIAPET_temp.txt");
-system("bedtools intersect -wa -wb -a lncs_$file -b RIGHT.txt >> CHIAPET_temp.txt");
-system("bedtools intersect -wa -wb -a protein_coding_$file -b LEFT.txt >> CHIAPET_temp.txt");
-system("bedtools intersect -wa -wb -a protein_coding_$file -b RIGHT.txt >> CHIAPET_temp.txt");
-#system("bedtools window -w -a lncs_$file -b LEFT.txt >> CHIAPET_temp.txt");
-#system("bedtools window -w -a lncs_$file -b RIGHT.txt >> CHIAPET_temp.txt");
-#system("bedtools window -w -a protein_coding_$file -b LEFT.txt >> CHIAPET_temp.txt");
-#system("bedtools window -w -a protein_coding_$file -b RIGHT.txt >> CHIAPET_temp.txt");
+
+system("bedtools intersect -wa -wb -a lncs_$file -b Upstream_CHIApet_Overlaps_sorted.txt >> CHIAPET_temp.txt");
+system("bedtools intersect -wa -wb -a lncs_$file -b Downstream_CHIApet_Overlaps_sorted.txt >> CHIAPET_temp.txt");
+system("bedtools intersect -wa -wb -a protein_coding_$file -b Upstream_CHIApet_Overlaps_sorted.txt >> CHIAPET_temp.txt");
+system("bedtools intersect -wa -wb -a protein_coding_$file -b Downstream_CHIApet_Overlaps_sorted.txt >> CHIAPET_temp.txt");
+#system("bedtools window -w -a lncs_$file -b Upstream_CHIApet_Overlaps_sorted.txt >> CHIAPET_temp.txt");
+#system("bedtools window -w -a lncs_$file -b Downstream_CHIApet_Overlaps_sorted.txt >> CHIAPET_temp.txt");
+#system("bedtools window -w -a protein_coding_$file -b Upstream_CHIApet_Overlaps_sorted.txt >> CHIAPET_temp.txt");
+#system("bedtools window -w -a protein_coding_$file -b Downstream_CHIApet_Overlaps_sorted.txt >> CHIAPET_temp.txt");
 
 open(CHIA2, "<CHIAPET_temp.txt");
 
@@ -342,13 +370,16 @@ while (my $line = <CHIA2>) {
 
 close CHIA2;
 
-#####STUPID FILLER FOR A SPLIT########
 foreach my $key (keys %CHIA){
     foreach my $key2 (keys $CHIA{$key}){
-        $CHIA{$key}{$key2} .= "spacer";
+        $CHIA{$key}{$key2} .= "end";
     }
 }
-system("rm CHIAPET_temp.txt;");
+
+system("rm Downstream_CHIApet_Overlaps.txt;");
+system("rm Upstream_CHIApet_Overlaps.txt;");
+system("rm Downstream_CHIApet_Overlaps_sorted.txt;");
+system("rm Upstream_CHIApet_Overlaps_sorted.txt;");
 
 print "ChIA-PET file hashed...\n";
 
@@ -356,7 +387,7 @@ print "ChIA-PET file hashed...\n";
 ################# PROTEIN-LESS LNCS #############################
 ##################################################################
 
-system("rm lncs_and_proteins_intersect_$file");
+ if (-e "lncs_and_proteins_intersect_$file") {system("rm lncs_and_proteins_intersect_$file")};
 ##Performs the linRNA/protein intersect and outputs the master file
 system("bedtools window -w 400000 -a lncs_$file -b protein_coding_$file > lncs_and_proteins_intersect_$file");
 system("bedtools window -c -w 400000 -a lncs_$file -b protein_coding_$file > temp_$file");
@@ -488,8 +519,8 @@ print "ChIP file hashed...\n";
 ###AKA dealing with things that are near lncs, but not necessarily overlapping them. Paper used 5kb.
 
 if ($cellectENH ne "NA") {
-    system("grep \"$cellectENH\" $enhancerfile > tempselectenhancers.txt");
-    $enhancerfile = "tempselectenhancers.txt";
+    system("grep \"$cellectENH\" $enhancerfile > User_Selected_Omics_Files/User_Selected_Enhancers.txt");
+    $enhancerfile = "User_Selected_Omics_Files/User_Selected_Enhancers.txt";
 }
 
 
@@ -516,12 +547,12 @@ print "Enhancers hashed...\n";
 
 
 if ($cellectSE ne "NA") {
-    system("grep \"$cellectSE\" $sefile > tempselectsuperenhancers.txt");
-    $sefile = "tempselectsuperenhancers.txt";
+    system("grep \"$cellectSE\" $sefile > User_Selected_Omics_Files/User_Selected_Super_Enhancers.txt");
+    $sefile = "User_Selected_Omics_Files/User_Selected_Super_Enhancers.txt";
 }
 
-system("bedtools closest -D ref -t first -a lncs_$file -b $sefile > tempnear2.txt"); 
-open(NEAR2, "<tempnear2.txt");
+system("bedtools closest -D ref -t first -a lncs_$file -b $sefile > lncRNAs_in_SuperEnhancers.txt"); 
+open(NEAR2, "<lncRNAs_in_SuperEnhancers.txt");
 
 while (my $line = <NEAR2>){
     chomp($line);
@@ -532,7 +563,7 @@ while (my $line = <NEAR2>){
 }
 
 close NEAR2;
-#system("rm tempnear2.txt");
+#system("rm lncRNAs_in_SuperEnhancers.txt");
 
 print "Super Enhancers hashed...\n";
 
@@ -563,7 +594,7 @@ print "Lnc characteristics hashed...\n";
 
 open(SUB, "<$nucfracfile");
 
-#%subcell = %{hashbash("Count_hg19_nuc_cyt_Jan14_forCREPE.txt",0,9,"F")};
+#%subcell = %{hashbash("Count_hg19_nuc_cyt_Jan14_forPLAIDOH.txt",0,9,"F")};
 
 while (my $line = <SUB>) {
     chomp($line);
@@ -595,15 +626,15 @@ print "Cell fraction file hashed...\n";
 
 
 if ($cellectRBP ne "NA") {
-    system("grep \"$cellectRBP\" $rbpfile > tempselectrbps.txt");
-    $rbpfile = "tempselectrbps.txt";
+    system("grep \"$cellectRBP\" $rbpfile > User_Selected_Omics_Files/User_Selected_RBPs.txt");
+    $rbpfile = "User_Selected_Omics_Files/User_Selected_RBPs.txt";
 }
 
-system("bedtools intersect -wa -wb -a lncs_$file -b $rbpfile > tempnear3.txt"); 
+system("bedtools intersect -wa -wb -a lncs_$file -b $rbpfile > lncRNAs_bound_by_RBPs.txt"); 
 
-%RBP = %{hashbash("tempnear3.txt",$numsamp+5,$numsamp+9,"T")};
+%RBP = %{hashbash("lncRNAs_bound_by_RBPs.txt",$numsamp+5,$numsamp+9,"T")};
 
-#system("rm tempnear3.txt");
+#system("rm lncRNAs_bound_by_RBPs.txt");
 
 print "RBPs hashed...\n";
 
@@ -640,7 +671,7 @@ while (my $line = <PRETEST>) {
     $R->run(q`options(max.print = 99999999)`);
     $R->run(q`tabletest<-cor.test(col1,col2, alternative = "two.sided", method ="spearman")`);
     my @y = split(" ", $R->get( 'tabletest' ));
-    #print "BEFORE CREPE1: @y\n";
+    #print "BEFORE PLAIDOH1: @y\n";
     $adjustedp{$count2} = "$y[13]";
     push(@testadjust, $y[13]);
     $count2++;
@@ -671,7 +702,7 @@ foreach my $val (@adjustedps){
 
 print "p-values adjusted...\n\n";
 
-print "Finished reading in all input files. Starting CREPE calculations!\n\n";
+print "Finished reading in all input files. Starting PLAIDOH calculations!\n\n";
 
 #%%%%%%%%%%%%%%%%***********%%%%%%%%%%%%%%%%%%%
 ################################################################%
@@ -681,7 +712,7 @@ print "Finished reading in all input files. Starting CREPE calculations!\n\n";
 
 ##Open in the intersected file and open the final output file.
 open(MAS, "<lncs_and_proteins_intersect_$file") or die "Could not open lncs_and_proteins_intersect_$file";
-open(OUT, ">Master_$file") or die "Could not open Master_$file";
+open(OUT, ">PLAIDOH_OUTPUT_$file") or die "Could not open PLAIDOH_OUTPUT_$file";
 
 ##print a Header for the output file:
 print OUT "LINE_NUMBER\tCHRlnc\tSTARTlnc\tSTOPlnc\tNAMElnc\tTYPElnc\tNUMBERlnc\tCHRprot\tSTARTprot\tSTOPprot\tNAMEprot\t";
@@ -804,7 +835,7 @@ while (my $line = <MAS>) {
     $R->run(q`tabletest<-cor.test(col1,col2, alternative = "two.sided", method ="pearson")`);
     my @y = split(" ", $R->get( 'tabletest' ));
     
-    #print "WITHIN CREPE1: @y\n";
+    #print "WITHIN PLAIDOH1: @y\n";
 
     $Master{$data[0]} .= "\t$y[$#y]";
     $limMaster{$data[0]} .= "\t$y[$#y]";
@@ -815,7 +846,7 @@ while (my $line = <MAS>) {
     
     $R->run(q`tabletest<-cor.test(col1,col2, alternative = "two.sided", method ="spearman")`);
     @y = split(" ", $R->get( 'tabletest' ));
-    #print "WITHIN CREPE2: @y\n";
+    #print "WITHIN PLAIDOH2: @y\n";
     
     $Master{$data[0]} .= "\t$y[$#y]";
     $limMaster{$data[0]} .= "\t$y[$#y]";
@@ -1127,9 +1158,9 @@ my $currrbp2;
     $Master{$data[0]} .= "\t$sensitivity";
     $limMaster{$data[0]} .= "\t$sensitivity";
     
-#################################################
+##################################################
 ######## Adding ADJUSTED SPEARMAN P #############
-#################################################
+##################################################
 
 
     $ap = shift(@finalps);
@@ -1139,9 +1170,9 @@ my $currrbp2;
 
 
 
-#################################################
-######## FINAL SCORE AND ENHANCER SCORE ######
-#################################################
+#########################################################
+######## CIS -REGULATORY, ENHACER, and RBP SCORES ######
+#########################################################
 
 
 ### Cis-regulatory score:
@@ -1212,7 +1243,12 @@ chop($RScore);
 
     $Master{$data[0]} .= "\t$RScore";
     $limMaster{$data[0]} .= "\t$RScore";
-
+    
+    
+    # pushing all scores into arrays for outputting summary graphs
+    push (@cisscores, $score);
+    push (@enhscores, $enhancerscore);
+    push (@RBPscores, $RScore);
 
 
 #################################################
@@ -1228,6 +1264,44 @@ chop($RScore);
 close MAS;
 print DAILYLOG "COMPLETED SUCCESSFULLY $today\n\n";
 
+
+##########################################
+#####  USING R TO OUTPUT GRAPHS  ########
+##########################################
+
+#$R->run(q``);
+
+$R->set( 'cisRegulatoryScore', \@cisscores);
+$R->set( 'EnhancerScore', \@enhscores );
+#$R->set( 'RBPScore', \@RBPscores);
+
+$R->run(q`GraphTable <- data.frame(cisRegulatoryScore, EnhancerScore)`);
+
+$R->run(q` colnames(GraphTable) <-  c("CisRegulatoryScore", "EnhancerScore")`);
+$R->run(q`GraphTable$CisRegulatoryScore <- as.numeric(as.character(GraphTable$CisRegulatoryScore))`);
+$R->run(q`GraphTable$EnhancerScore <- as.numeric(as.character(GraphTable$EnhancerScore))`);
+
+$R->run(q`GraphTable$CISRANK <- rank(GraphTable$CisRegulatoryScore, na.last = FALSE, ties.method="random")`);
+$R->run(q`GraphTable$ENHRANK <- rank(GraphTable$EnhancerScore, na.last = FALSE, ties.method="random")`);
+
+#$R->run(q`GraphTable2 <- GraphTable[order(GraphTable$CISRANK),]`);
+$R->run(q`colnames(GraphTable) <-  c( "CisRegulatoryScore", "EnhancerScore", "CisRegulatoryRank", "EnhancerRank")`);
+$R->run(q`library("ggplot2")`);
+
+$R->run(q`jpeg("RankedCisRegulatoryScores.jpg")`);
+$R->run(q`ggplot(GraphTable, aes(y=CisRegulatoryScore, x=CisRegulatoryRank)) + geom_point() + theme_classic()+ geom_smooth(method = "lm", se=FALSE, color="red", formula = y ~ x)`);
+$R->run(q`dev.off()`);
+
+$R->run(q`jpeg("RankedEnhancerScores.jpg")`);
+$R->run(q`ggplot(GraphTable, aes(y=EnhancerScore, x=EnhancerRank)) + geom_point() + theme_classic() + geom_smooth(method = "lm", se=FALSE, color="red", formula = y ~ x) `);
+$R->run(q`dev.off()`);
+
+$R->run(q`jpeg("CisRegulatoryScorebyEnhancerScore.jpg")`);
+$R->run(q`ggplot(GraphTable, aes(y=EnhancerScore, x=CisRegulatoryScore)) + geom_point() + theme_classic()`);
+$R->run(q`dev.off()`);
+
+$R->run(q`write.table(GraphTable, file="table.txt", sep="\t", quote=FALSE)`);
+
 ##################################
 #### CLOSES AN INSTANCE OF R #####
 ##################################
@@ -1236,9 +1310,9 @@ $R->stop();
 ##################################
 
 
-##################################################################
+################################################################
 ########################## Subroutines ###########################
-##################################################################
+################################################################
 
 ##Enter start and stop of two elements as list
 sub Overlap(){
