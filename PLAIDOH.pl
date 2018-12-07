@@ -9,6 +9,7 @@ use Term::ANSIColor 2.00 qw(:pushpop);
 use List::Util qw(sum);
 use List::Util qw(max);
 use List::Util qw(min);
+use Scalar::Util qw(looks_like_number);
 use Statistics::R;
 
 
@@ -1171,9 +1172,9 @@ my $currrbp2;
 
 
 
-#########################################################
-######## CIS -REGULATORY, ENHACER, and RBP SCORES ######
-#########################################################
+###########################################################
+######## CIS -REGULATORY, ENHANCER, and RBP SCORES ######
+###########################################################
 
 
 ### Cis-regulatory score:
@@ -1222,15 +1223,19 @@ my $RScore="";
                 $CYT = $RBPCyt{$split[0]};
                 
             }
+            $fracscores="NA";
+            if (looks_like_number($CYT) && looks_like_number($NUC)){
+                if ($fraction>=0.75 && $NUC==1){ $fracscores = 2;}
+                if ($fraction<=0.3 && $CYT==1){ $fracscores = -2;}
+                if ($fraction>=0.75 && $NUC==0){ $fracscores = 1;}
+                if ($fraction<=0.3 && $CYT==0){ $fracscores = -1;}
+                if ($fraction>0.3 && $fraction < 0.75 && $NUC==0 && $CYT==1){ $fracscores = -2;}
+                if ($fraction>0.3 && $fraction < 0.75 && $NUC==1 && $CYT==0){ $fracscores = 2;}
+                if ($fraction>0.3 && $fraction < 0.75 && $NUC==1 && $CYT==1){ $fracscores = 3;}
+                if ($fracscores eq "0") {$fracscores="NA";}
+            }
             
-            if ($fraction>=0.75 && $NUC==1){ $fracscores = 2;}
-            if ($fraction<=0.3 && $CYT==1){ $fracscores = -2;}
-            if ($fraction>=0.75 && $NUC==0){ $fracscores = 1;}
-            if ($fraction<=0.3 && $CYT==0){ $fracscores = -1;}
-            if ($fraction>0.3 && $fraction < 0.75 && $NUC==0 && $CYT==1){ $fracscores = -2;}
-            if ($fraction>0.3 && $fraction < 0.75 && $NUC==1 && $CYT==0){ $fracscores = 2;}
-            if ($fraction>0.3 && $fraction < 0.75 && $NUC==1 && $CYT==1){ $fracscores = 3;}
-            if ($fracscores eq "0") {$fracscores="NA";}
+
             
             $RScore .= "$fracscores,";
         }
@@ -1272,6 +1277,7 @@ chop($RScore);
 close MAS;
 print DAILYLOG "COMPLETED SUCCESSFULLY $today\n\n";
 
+print "PLAIDOH Calculations Complete! Creating output graphs...\n\n";
 
 ##########################################
 #####  USING R TO OUTPUT GRAPHS  ########
@@ -1308,11 +1314,20 @@ $R->run(q`jpeg("RankedEnhancerScores.jpg")`);
 $R->run(q`ggplot(GraphTable, aes(y=EnhancerScore, x=EnhancerRank)) + geom_point() + theme_classic() + geom_smooth(method = "lm", se=FALSE, color="red", formula = y ~ x) `);
 $R->run(q`dev.off()`);
 
+#
+#$R->run(q`if (!require("dichromat")) {
+#  install.packages("dichromat", dependencies = TRUE)
+#  library(dichromat)
+#}`);
+
+
 $R->run(q`GraphTable2 <- data.frame(LincAverage, RBPScore)`);
 $R->run(q` colnames(GraphTable2) <-  c("AverageLicExpression_Log10FPKM", "FractionScore")`);
+$R->run(q`color.palette  <- c("red", "grey", "white", "grey", "blue", "purple")`);
+$R->run(q`names(color.palette) <- c(-2,-1,0,1,2,3)`);
 
 $R->run(q`jpeg("FractionScoreExpression.jpg")`);
-$R->run(q`ggplot(GraphTable2, aes(y=AverageLicExpression_Log10FPKM, x=FractionScore)) + geom_boxplot() + theme_classic()`);
+$R->run(q`ggplot(GraphTable2, aes(y=AverageLicExpression_Log10FPKM, x=FractionScore, col=as.factor(FractionScore))) + geom_boxplot() + theme_classic() + scale_color_manual(breaks=c(-2,-1,0,1,2,3), labels=c("Cytoplasmic","Discordant","Unbound", "Discordant","Nuclear","Nuclear and Cytoplasmic"), values=color.palette, na.value="lightgrey")`);
 $R->run(q`dev.off()`);
 
 #ggplot(data=Figure5Dfinal, aes(col=as.factor(Figure5Dfinal$FracScore), y=log(LINC_AVERAGE), x=as.factor(FracScore))) + geom_boxplot() + theme_classic() +
