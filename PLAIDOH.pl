@@ -197,6 +197,7 @@ my @currrbp;
 my @cisscores;
 my @enhscores;
 my @RBPscores;
+my @laverages;
 
 
 #STRINGS
@@ -1246,9 +1247,16 @@ chop($RScore);
     
     
     # pushing all scores into arrays for outputting summary graphs
+
+
     push (@cisscores, $score);
     push (@enhscores, $enhancerscore);
-    push (@RBPscores, $RScore);
+    my @fracs = split(",", $RScore);
+    foreach my $fscore (@fracs){
+        push(@laverages, $laverage);
+        push(@RBPscores, $fscore);
+    }
+    
 
 
 #################################################
@@ -1271,11 +1279,15 @@ print DAILYLOG "COMPLETED SUCCESSFULLY $today\n\n";
 
 #$R->run(q``);
 
+
+
 $R->set( 'cisRegulatoryScore', \@cisscores);
 $R->set( 'EnhancerScore', \@enhscores );
-#$R->set( 'RBPScore', \@RBPscores);
+$R->set( 'RBPScore', \@RBPscores);
+$R->set( 'LincAverage', \@laverages);
 
 $R->run(q`GraphTable <- data.frame(cisRegulatoryScore, EnhancerScore)`);
+
 
 $R->run(q` colnames(GraphTable) <-  c("CisRegulatoryScore", "EnhancerScore")`);
 $R->run(q`GraphTable$CisRegulatoryScore <- as.numeric(as.character(GraphTable$CisRegulatoryScore))`);
@@ -1284,7 +1296,7 @@ $R->run(q`GraphTable$EnhancerScore <- as.numeric(as.character(GraphTable$Enhance
 $R->run(q`GraphTable$CISRANK <- rank(GraphTable$CisRegulatoryScore, na.last = FALSE, ties.method="random")`);
 $R->run(q`GraphTable$ENHRANK <- rank(GraphTable$EnhancerScore, na.last = FALSE, ties.method="random")`);
 
-#$R->run(q`GraphTable2 <- GraphTable[order(GraphTable$CISRANK),]`);
+
 $R->run(q`colnames(GraphTable) <-  c( "CisRegulatoryScore", "EnhancerScore", "CisRegulatoryRank", "EnhancerRank")`);
 $R->run(q`library("ggplot2")`);
 
@@ -1296,11 +1308,17 @@ $R->run(q`jpeg("RankedEnhancerScores.jpg")`);
 $R->run(q`ggplot(GraphTable, aes(y=EnhancerScore, x=EnhancerRank)) + geom_point() + theme_classic() + geom_smooth(method = "lm", se=FALSE, color="red", formula = y ~ x) `);
 $R->run(q`dev.off()`);
 
-$R->run(q`jpeg("CisRegulatoryScorebyEnhancerScore.jpg")`);
-$R->run(q`ggplot(GraphTable, aes(y=EnhancerScore, x=CisRegulatoryScore)) + geom_point() + theme_classic()`);
+$R->run(q`GraphTable2 <- data.frame(LincAverage, RBPScore)`);
+$R->run(q` colnames(GraphTable2) <-  c("AverageLicExpression_Log10FPKM", "FractionScore")`);
+
+$R->run(q`jpeg("FractionScoreExpression.jpg")`);
+$R->run(q`ggplot(GraphTable2, aes(y=AverageLicExpression_Log10FPKM, x=FractionScore)) + geom_boxplot() + theme_classic()`);
 $R->run(q`dev.off()`);
 
-$R->run(q`write.table(GraphTable, file="table.txt", sep="\t", quote=FALSE)`);
+#ggplot(data=Figure5Dfinal, aes(col=as.factor(Figure5Dfinal$FracScore), y=log(LINC_AVERAGE), x=as.factor(FracScore))) + geom_boxplot() + theme_classic() +
+#    scale_color_manual(breaks=c(-2,-1,0,1,2,3), labels=c("Cytoplasmic","Discordant","Unbound", "Discordant","Nuclear","Nuclear and Cytoplasmic"), values=color.palette, na.value="lightgrey")
+#
+#$R->run(q`write.table(GraphTable, file="table.txt", sep="\t", quote=FALSE)`);
 
 ##################################
 #### CLOSES AN INSTANCE OF R #####
