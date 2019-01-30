@@ -1,7 +1,7 @@
 # PLAIDOH LncRNA Annotation Software
-`Manuscript submitted. Code made public for reviewer access, but in Beta-testing until manuscript review and publication. Please feel free to get in touch with requests or comments: sarahpyfrom@gmail.com`
+`Manuscript accepted at BMC Genomics. Code made public for reviewer access, but in Beta-testing until manuscript publication. Please feel free to get in touch with requests or comments: sarahpyfrom@gmail.com`
 
-Supplementary information and a description of **PLAIDOH** output files can be found in Pyfrom et al, 2018 (PLAIDOH: A Novel Approach for Functional Prediction of Long Non-Coding RNAs Identifies Cancer-Specific LncRNA Activities). We suggest you take a look at Table 1!
+Supplementary information and a description of **PLAIDOH** output files can be found in Pyfrom et al, 2019 (PLAIDOH: A Novel Approach for Functional Prediction of Long Non-Coding RNAs Identifies Cancer-Specific LncRNA Activities). We suggest you take a look at Table 1!
 
 ## Installation
 
