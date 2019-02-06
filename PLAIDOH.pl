@@ -41,17 +41,20 @@ if (@ARGV == 0 ){ die
                 sort -k1,1 -k2,2n in.txt > in_sorted.txt
                 
     OPTIONS
-        
+    
+        -d Distance up and downstream from lncRNA that PLAIDOH should look for lncRNA/coding gene pairs
+            Default distance: 400,000bp
+            
         -s filename for Super-enhancer file.
             Default file: SEA_SuperEnhancers.bed
         
-        --cellSE Optional selection to pick a specific cell line
+        --cellSE Recommended selection to pick a specific cell line
                from the super enhancer list
            
        -e filename for Enhancer data.
             Default file: EnhancerAtlas_Enhancers.bed
            
-        --cellENH Optional selection to pick a specific cell line
+        --cellENH Recommended selection to pick a specific cell line
                from the Enhancer list
        
        -f finename for Nuclear Fraction file
@@ -63,7 +66,7 @@ if (@ARGV == 0 ){ die
         -c filename for Chip-seq data
             Default file: ENCODE_ChIPseq_pValues.txt
             
-        --cellCHIP Optional selection to pick a specific cell line
+        --cellCHIP Recommended selection to pick a specific cell line
                 from the ChipSeq list
         
         -p filename for CHIA-pet data
@@ -75,8 +78,10 @@ if (@ARGV == 0 ){ die
         --RBP Optional selection to pick a specific RBP
                 variable from the RBP list\n
                 
-        Detailed descriptions for all input files and their sources can be found in the Methods
-        secition of Pyfrom, Luo and Payton, 2018 BMC Genomics.\n\n";
+        Note: In this version of PLAIDOH, all the terms after any \"--\" option are a simple grep of the corresponding input file, default or user-defined.
+        ie PLAIDOH will utilize any line in the corresponding file that contains that sequence of  characters. For example, the use of \"--cellCHIP Jurkat\"
+        will utilize ChIP-seq from only Jurkat data. It is recommended that the user look through their options within the default files to determine which
+        tissue-type or cell line will be most useful for their study.\n\n";
                     
                     }
 
@@ -95,10 +100,12 @@ my $cellectSE="NA";
 my $cellectENH="NA";
 my $cellectCHIP="NA";
 my $cellectRBP="NA";
+my $distancelook = 400000;
 
 
 
 GetOptions("s=s" => \$sefile,
+           "d=s" => \$distancelook,
            "p=s" => \$chiapetfile,
            "c=s" => \$chipfile,
            "e=s" => \$enhancerfile,
@@ -131,8 +138,7 @@ if (not -e "Default_Files/Biomartquery_hg19.txt") {
     system("unzip Default_Files/Biomartquery_hg19.txt.zip -d Default_Files")
 }
 
-#ENCODE_ChIPseq_pValues.txt
-#die("done!");
+
 
 ###############################################################################################
 ###################### OPENS THE USER-GENERATED INPUT EXPRESSION FILE ######################
@@ -153,6 +159,7 @@ open(DAILYLOG, ">>PLAIDOH_RUN_LOG.txt") or die "Could not open: PLAIDOH_RUN_LOG.
 
 print DAILYLOG "\n$0 run $today Using files:
                 Input: $file
+                Max distance lncRNA to coding genes: $distancelook
                 SE file: $sefile selecting for: $cellectSE
                 Enhancer file: $enhancerfile selecting for: $cellectENH
                 ChIP File: $chipfile selecting for: $cellectCHIP
@@ -323,11 +330,11 @@ while (my $line = <CHIA>) {
     next if ($ans == 1);
     
     if (defined($data[6])) {
-        print LEFT "$data[0]\t$data[1]\t$data[2]\tLE$countchia\t$data[6]\n"; ##Added $data6 (the type of chiapet on November 10th)
-        print RIGHT "$data[3]\t$data[4]\t$data[5]\tRI$countchia\t$data[6]\n"; ##Added $data6 (the type of chiapet on November 10th)
+        print LEFT "$data[0]\t$data[1]\t$data[2]\tLE$countchia\t$data[6]\n"; 
+        print RIGHT "$data[3]\t$data[4]\t$data[5]\tRI$countchia\t$data[6]\n"; 
     }else{
-        print LEFT "$data[0]\t$data[1]\t$data[2]\tLE$countchia\tLE$countchia\n"; ##Added $data6 (the type of chiapet on November 10th)
-        print RIGHT "$data[3]\t$data[4]\t$data[5]\tRI$countchia\tRI$countchia\n"; ##Added $data6 (the type of chiapet on November 10th)
+        print LEFT "$data[0]\t$data[1]\t$data[2]\tLE$countchia\tLE$countchia\n";
+        print RIGHT "$data[3]\t$data[4]\t$data[5]\tRI$countchia\tRI$countchia\n"; 
     }
     
     
@@ -352,10 +359,7 @@ system("bedtools intersect -wa -wb -a lncs_$file -b Upstream_CHIApet_Overlaps_so
 system("bedtools intersect -wa -wb -a lncs_$file -b Downstream_CHIApet_Overlaps_sorted.txt >> CHIAPET_temp.txt");
 system("bedtools intersect -wa -wb -a protein_coding_$file -b Upstream_CHIApet_Overlaps_sorted.txt >> CHIAPET_temp.txt");
 system("bedtools intersect -wa -wb -a protein_coding_$file -b Downstream_CHIApet_Overlaps_sorted.txt >> CHIAPET_temp.txt");
-#system("bedtools window -w -a lncs_$file -b Upstream_CHIApet_Overlaps_sorted.txt >> CHIAPET_temp.txt");
-#system("bedtools window -w -a lncs_$file -b Downstream_CHIApet_Overlaps_sorted.txt >> CHIAPET_temp.txt");
-#system("bedtools window -w -a protein_coding_$file -b Upstream_CHIApet_Overlaps_sorted.txt >> CHIAPET_temp.txt");
-#system("bedtools window -w -a protein_coding_$file -b Downstream_CHIApet_Overlaps_sorted.txt >> CHIAPET_temp.txt");
+
 
 open(CHIA2, "<CHIAPET_temp.txt");
 
@@ -363,11 +367,9 @@ while (my $line = <CHIA2>) {
     
     chomp($line);
     my @data = split("\t", $line);
-    #Saves the individual lnc or protein/CHIAPET overlaps
-    #$CHIA{L/P#}={LE/RI#}
-    #$CHIA{cell_type}{L/P#}={LE/RI#}
+
     $CHIA{$data[$numsamp+10]}{$data[$numsamp+5]} .= "$data[$numsamp+9]\t";
-    #print "$data[$numsamp+5]\t$data[$numsamp+9]\n";
+
 }
 
 close CHIA2;
@@ -391,8 +393,8 @@ print "ChIA-PET file hashed...\n";
 
  if (-e "lncs_and_proteins_intersect_$file") {system("rm lncs_and_proteins_intersect_$file")};
 ##Performs the linRNA/protein intersect and outputs the master file
-system("bedtools window -w 400000 -a lncs_$file -b protein_coding_$file > lncs_and_proteins_intersect_$file");
-system("bedtools window -c -w 400000 -a lncs_$file -b protein_coding_$file > temp_$file");
+system("bedtools window -w $distancelook -a lncs_$file -b protein_coding_$file > lncs_and_proteins_intersect_$file");
+system("bedtools window -c -w $distancelook -a lncs_$file -b protein_coding_$file > temp_$file");
 system("bedtools intersect -u -a lncs_$file -b protein_coding_$file > temp2_$file");
 
 ###This part saves a hash of the lncs that are not within 100kb of a protein-coding gene. 
