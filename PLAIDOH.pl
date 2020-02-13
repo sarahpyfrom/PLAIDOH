@@ -375,7 +375,7 @@ while (my $line = <CHIA2>) {
 close CHIA2;
 
 foreach my $key (keys %CHIA){
-    foreach my $key2 (keys $CHIA{$key}){
+    foreach my $key2 (keys %{$CHIA{$key}}){
         $CHIA{$key}{$key2} .= "end";
     }
 }
